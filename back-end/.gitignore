@@ -1,0 +1,47 @@
+### === ENVIRONMENT & SECRETS === ###
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets/
+config/*.local.yaml
+config/*.local.yml
+
+### === OS FILES === ###
+.DS_Store
+Thumbs.db
+desktop.ini
+
+### === IDE / EDITOR === ###
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+### === LOGS === ###
+*.log
+logs/
+
+### =========================== ###
+### ============ GO =========== ###
+### =========================== ###
+/bin/
+/build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.txt
+coverage.html
+go.work
+go.work.sum
+tmp/
+.air.toml.local
+
+vendor/

@@ -1,0 +1,61 @@
+### === ENVIRONMENT & SECRETS === ###
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets/
+
+### === OS FILES === ###
+.DS_Store
+Thumbs.db
+desktop.ini
+
+### === IDE / EDITOR === ###
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+### === LOGS === ###
+*.log
+logs/
+
+### =========================== ###
+### ========= NEXT.JS ========= ###
+### =========================== ###
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Next.js build output
+/.next/
+/out/
+
+# Production build
+/build
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local env files (Next.js convention)
+.env*.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+/coverage
+
+# Turbo
+.turbo
