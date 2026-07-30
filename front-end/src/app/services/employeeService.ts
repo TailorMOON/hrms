@@ -41,7 +41,7 @@ export const getEmployeeById = async (id: number): Promise<Employee> => {
 
 export const getEmployeeByNIP = async (nip: string): Promise<Employee> => {
   try {
-      const response = await axios.get(`${API_URL}/employees/nip/${nip}`);
+      const response = await axios.get(`${API_URL}/employee/nip/${nip}`);
       return response.data;
   } catch (error) {
       console.error(`Failed to fetch employee with NIP ${nip}`, error);
