@@ -2,13 +2,23 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
+
 	"github.com/golang-jwt/jwt/v4"
 )
 
-var jwtKey = []byte("my_secret_key")
+var jwtKey []byte
+
+func SetJWTKey(key string) error {
+	if key == "" {
+		return errors.New("JWT secret key must not be empty")
+	}
+	jwtKey = []byte(key)
+	return nil
+}
 
 func JWTMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +44,7 @@ func JWTMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "user", claims.Username)
+		ctx := context.WithValue(r.Context(), userContextKey, claims.Username)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -49,14 +59,14 @@ func GenerateJWT(username string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtKey)
-	if err != nil {
-		return "", err
-	}
-	return tokenString, nil
+	return token.SignedString(jwtKey)
 }
 
 type Claims struct {
 	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
+
+type contextKey string
+
+const userContextKey contextKey = "user"

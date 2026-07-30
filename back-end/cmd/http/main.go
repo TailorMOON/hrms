@@ -6,6 +6,7 @@ import (
 	"backend/internal/delivery/http"
 	"backend/internal/service"
 	"backend/internal/database"
+	authmw "backend/internal/middleware"
 	"backend/pkg/log"
 	"context"
 	"fmt"
@@ -22,6 +23,11 @@ import (
 func main() {
 	// Load configuration
 	cfg := config.LoadConfig()
+
+	if err := authmw.SetJWTKey(cfg.SecretKey); err != nil {
+		fmt.Println("FATAL:", err)
+		os.Exit(1)
+	}
 
 	// Initialize logger
 	logger := log.NewLogrusLogger()
