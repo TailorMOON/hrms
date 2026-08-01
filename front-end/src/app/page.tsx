@@ -14,8 +14,6 @@ import {
     CircularProgress
 } from '@mui/material';
 import { QrReader } from 'react-qr-reader';
-import { getEmployeeByNIP } from './services/employeeService';
-import { getAttendanceByDate, createAttendance, updateAttendance } from './services/attendanceService';
 import { Attendance } from './types/Attendance';
 
 
@@ -33,6 +31,20 @@ const formatLocalTime = () => {
         second: '2-digit' 
     });
     return { day, date, time, formattedDate: `${day}, ${date} | ${time}` };
+};
+
+const toLocalISOString = (date: Date): string => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const offsetMin = -date.getTimezoneOffset();
+    const sign = offsetMin >= 0 ? '+' : '-';
+    const offsetH = pad(Math.floor(Math.abs(offsetMin) / 60));
+    const offsetM = pad(Math.abs(offsetMin) % 60);
+
+    return (
+        `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+        `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}` +
+        `${sign}${offsetH}:${offsetM}`
+    );
 };
 
 const HomePage: React.FC = () => {
@@ -71,28 +83,10 @@ const HomePage: React.FC = () => {
     const handleSubmit = async () => {
         setIsLoading(true);
         try {
-            const employee = await getEmployeeByNIP(nip);
-            if (!employee) {
-                setAlertSeverity('error');
-                setAlertMessage('NIP not found');
-                setIsLoading(false); 
-                return;
-            }
-    
             const now = formatLocalTime();
             const formattedDate = now.date.split('/').reverse().join('-');
 
-            if (action === 'checkin') {
-                const attendances = await getAttendanceByDate(nip, formattedDate, formattedDate, 1, 0);
-                if (attendances && attendances.length > 0) {
-                    setAlertSeverity('error');
-                    setAlertMessage('You have already checked in today!');
-                    setIsLoading(false);
-                    return;
-                }
-            }
-
-            const requestBody = JSON.stringify({ nip });
+            const requestBody = JSON.stringify({ nip, attendanceDate: formattedDate, action });
             console.log('Body sent to backend:', requestBody);
     
             const response = await fetch('http://localhost:8080/qrcode/generate', {
@@ -104,9 +98,9 @@ const HomePage: React.FC = () => {
             });
 
             if (!response.ok) {
-                const errorResponse = await response.json();
+                const errorText = await response.text();
                 setAlertSeverity('error');
-                setAlertMessage(errorResponse.message || 'Failed to generate QR code');
+                setAlertMessage(errorText || 'Failed to generate QR code');
                 setIsLoading(false);
                 return;
             }
@@ -148,8 +142,10 @@ const HomePage: React.FC = () => {
     
             if (result === expectedQrCode) {
                 const now = formatLocalTime();
-                const formattedDate = now.date.split('/').reverse().join('-');
                 const formattedTime = now.time;
+
+                const nowDate = new Date();
+                const isoDate = toLocalISOString(nowDate);
     
                 const checkInLimit = new Date();
                 checkInLimit.setHours(8, 31, 0, 0);
@@ -161,36 +157,24 @@ const HomePage: React.FC = () => {
                     if (action === 'checkin') {
                         const newAttendanceData: Attendance = {
                             employee_id: nip,
-                            date: formattedDate,
+                            date: isoDate,
                             check_in_time: formattedTime,
-                            check_out_time: '00:00:00', 
+                            check_out_time: null,
                             is_late: isLate,
                         };
                         setShouldCreate(true);
                         setAttendanceToUpdate(newAttendanceData);
                     } else if (action === 'checkout') {
-                        const attendances = await getAttendanceByDate(nip, formattedDate, formattedDate, 1, 0);
-                        if (attendances && attendances.length > 0) {
-                            const existingAttendance = attendances[0];
-                            if (existingAttendance.id !== undefined) {
-                                setShouldUpdate(true);
-                                setAttendanceToUpdate({
-                                    id: existingAttendance.id,
-                                    employee_id: existingAttendance.employee_id,
-                                    date: existingAttendance.date,
-                                    check_in_time: existingAttendance.check_in_time,
-                                    check_out_time: formattedTime,
-                                    is_late: existingAttendance.is_late,
-                                });
-                            } else {
-                                setAlertSeverity('error');
-                                setAlertMessage('Invalid attendance record');
-                            }
-                        } else {
-                            setAlertSeverity('error');
-                            setAlertMessage('No check-in record found for today. Please check-in first.');
-                        }
-                    }
+                        const newAttendanceData: Attendance = {
+                            employee_id: nip,
+                            date: isoDate,
+                            check_in_time: null,
+                            check_out_time: formattedTime, 
+                            is_late: isLate,
+                        };
+                        setShouldUpdate(true);
+                        setAttendanceToUpdate(newAttendanceData);
+                    } 
     
                     setTimeout(() => {
                         setIsScanning(false);
@@ -211,39 +195,59 @@ const HomePage: React.FC = () => {
 
     const handleCreateOrUpdateAttendance = async () => {
         setIsScanning(false);
-        if (shouldCreate && attendanceToUpdate) {
-            try {
-                await createAttendance(attendanceToUpdate);
-                setAlertSeverity('success');
-                setAlertMessage('Check-in record success!');
+
+        if (!attendanceToUpdate) {
+            setAlertSeverity('error');
+            setAlertMessage('Invalid attendance data.');
+            handleCloseCamera();
+            return;
+        }
+
+        try {
+            let attendanceType: 'check-in' | 'check-out';
+
+            if (shouldCreate) {
+                attendanceType = 'check-in';
+            } else if (shouldUpdate) {
+                attendanceType = 'check-out';
+            } else {
+                setAlertSeverity('error');
+                setAlertMessage('Invalid attendance action.');
                 handleCloseCamera();
-            } catch (error) {
-                console.error('Error creating attendance:', error);
-                setAlertSeverity('error');
-                setAlertMessage('Failed to create attendance record.');
-            } finally {
-                setShouldCreate(false);
+                return;
             }
-        } else if (shouldUpdate && attendanceToUpdate) {
-            try {
-                if (attendanceToUpdate && typeof attendanceToUpdate.id === 'number') {
-                    await updateAttendance(attendanceToUpdate.id, attendanceToUpdate);
-                    setAlertSeverity('success');
-                    setAlertMessage('Check-Out record success!');
-                    handleCloseCamera();
-                } else {
-                    console.error('Invalid attendance record or ID is undefined');
-                    setAlertSeverity('error');
-                    setAlertMessage('Invalid attendance record');
-                    handleCloseCamera();
-                }             
-            } catch (error) {
-                console.error('Error updating attendance:', error);
-                setAlertSeverity('error');
-                setAlertMessage('Failed to update attendance record.');
-            } finally {
-                setShouldUpdate(false);
+
+            const response = await fetch('http://localhost:8080/qrcode/handle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    attendance: attendanceToUpdate,
+                    attendanceType: attendanceType,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to process attendance');
             }
+
+            setAlertSeverity('success');
+            setAlertMessage(
+                attendanceType === 'check-in'
+                    ? 'Check-in record success!'
+                    : 'Check-Out record success!'
+            );
+
+            handleCloseCamera();
+        } catch (error) {
+            console.error('Error processing attendance:', error);
+            setAlertSeverity('error');
+            setAlertMessage('Failed to process attendance.');
+            handleCloseCamera();
+        } finally {
+            setShouldCreate(false);
+            setShouldUpdate(false);
         }
     };
 

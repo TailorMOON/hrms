@@ -160,7 +160,7 @@ const Header: React.FC = () => {
                     borderBottom: '5px solid #5a5a5a'
                 }}
             >
-                <Toolbar>
+                <Toolbar sx={{ height: '100%' }}>
                     <IconButton 
                         edge="start" 
                         color="inherit" 
@@ -196,7 +196,7 @@ const Header: React.FC = () => {
                                     sx={{
                                         height: 50,
                                         width: 50,
-                                        marginRight: 2,
+                                        marginRight: 1,
                                         borderRadius: '30%',
                                         backgroundColor: '#ffffff',
                                         objectFit: 'cover', 

@@ -23,7 +23,8 @@ const Footer: React.FC = () => {
         >
             <Toolbar 
                 sx={{ 
-                    justifyContent: 'space-between' 
+                    justifyContent: 'space-between',
+                    height: '100%' 
                 }}
             >
                 <Box 

@@ -48,7 +48,8 @@ export const getAttendanceByDate = async (
 ): Promise<Attendance[]> => {
   try {
     const response = await axios.get(`${API_URL}/attendance/employee/${employeeId}`, {
-      params: { startDate, endDate, limit, offset }
+      params: { startDate, endDate, limit, offset },
+      ...getHeadersWithAuth(),
     });
     return response.data;
   } catch (error) {

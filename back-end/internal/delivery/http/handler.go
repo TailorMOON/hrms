@@ -34,12 +34,9 @@ func (h *Handler) RegisterRoutes(r *chi.Mux) {
 
 	r.Post("/login", h.AuthHandler.Login)
 
-	r.Route("/employee", func(r chi.Router) {
-		r.Get("/nip/{nip}", h.EmployeeHandler.GetEmployeeByNIP)
-	})
-
 	r.Route("/qrcode", func(r chi.Router) {
 		r.Post("/generate", h.QRCodeHandler.GenerateAndSendQRCode)
+		r.Post("/handle", h.QRCodeHandler.HandleQRCode)
 	})
 
 	r.Group(func(r chi.Router) {
@@ -47,6 +44,7 @@ func (h *Handler) RegisterRoutes(r *chi.Mux) {
 
 		r.Route("/employees", func(r chi.Router) {
 			r.Get("/", h.EmployeeHandler.GetAllEmployees)
+			r.Get("/nip/{nip}", h.EmployeeHandler.GetEmployeeByNIP)
 			r.Get("/{id}", h.EmployeeHandler.GetEmployeeByID)
 			r.Get("/request", h.EmployeeHandler.GetAllReqUpdateEmployee)
 			r.Get("/request/{nip}", h.EmployeeHandler.GetReqUpdateEmployeeByNIP)
